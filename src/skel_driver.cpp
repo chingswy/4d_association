@@ -1,7 +1,13 @@
 #include <iostream>
 #include <fstream>
 #include <Eigen/Eigen>
+#if __cplusplus >= 201703L && __has_include(<filesystem>)
 #include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 #include "skel_driver.h"
 #include "math_util.h"
 
@@ -62,8 +68,8 @@ SkelDriver::SkelDriver(const SkelType& _type, const std::string& modelPath)
 	m_type = _type;
 	const SkelDef& def = GetSkelDef(m_type);
 	
-	m_joints = MathUtil::LoadMat<float>((std::filesystem::path(modelPath) / std::filesystem::path("joints.txt")).string()).transpose();
-	m_jShapeBlend = MathUtil::LoadMat<float>((std::filesystem::path(modelPath) / std::filesystem::path("jshape_blend.txt")).string());
+	m_joints = MathUtil::LoadMat<float>((fs::path(modelPath) / fs::path("joints.txt")).string()).transpose();
+	m_jShapeBlend = MathUtil::LoadMat<float>((fs::path(modelPath) / fs::path("jshape_blend.txt")).string());
 
 	assert(m_joints.cols() ==def.jointSize
 		&& m_jShapeBlend.rows() == 3 *def.jointSize

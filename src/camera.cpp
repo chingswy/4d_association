@@ -3,6 +3,7 @@
 #include <Eigen/Eigen>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core/eigen.hpp>
+#include <opencv2/imgproc.hpp>
 #include "camera.h"
 #include "math_util.h"
 
