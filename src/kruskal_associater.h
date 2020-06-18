@@ -24,6 +24,11 @@ private:
 		float score;
 		int pafIdx;
 		Eigen::VectorXi proposal;
+		friend std::ostream &operator<<(std::ostream &out, const BoneClique &A){
+			out << "proposal: " << A.proposal.transpose() << std::endl;
+			out << "pafIdx: " << A.pafIdx << " score: " << A.score;
+			return out;
+		}
 		bool operator < (const BoneClique &b) const { return score < b.score; }
 	};
 

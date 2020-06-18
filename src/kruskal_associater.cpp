@@ -490,6 +490,7 @@ void KruskalAssociater::AssignTopClique(std::vector<BoneClique>& cliques)
 	const auto& nodes = m_boneNodes[clique.pafIdx];
 	const auto& jIdxPair = def.pafDict.col(clique.pafIdx);
 	if (clique.proposal[m_cams.size()] != -1) {
+		// with temporal limb
 		const int personIdx = clique.proposal[m_cams.size()];
 		const int checkCnt = [&]() {
 			int cnt = 0;
@@ -535,6 +536,7 @@ void KruskalAssociater::AssignTopClique(std::vector<BoneClique>& cliques)
 		}
 	}
 	else {
+		// without temporal limb
 		Voting voting;
 		Clique2Voting(clique, voting);
 		voting.Parse();
@@ -799,9 +801,13 @@ void KruskalAssociater::SpanTree()
 
 void KruskalAssociater::Associate()
 {
+	// Vec<detection> detection ==> VecVec<Mat3Xf> jointRays
 	CalcJointRays();
+	// VecVecVec<MatXf> epiEdges
 	CalcEpiEdges();
+	// VecVec<MatXf> tempEdges
 	CalcTempEdges();
+	// count the limb pair in single view
 	CalcBoneNodes();
 	CalcBoneEpiEdges();
 	CalcBoneTempEdges();
