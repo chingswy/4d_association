@@ -10,6 +10,7 @@ std::vector<cv::Rect> SkelPainter::MergeImgs(const std::vector<cv::Mat>& imgs, c
 	const cv::Size size = _size.width * _size.height == 0 ? cv::Size(imgs.begin()->cols, imgs.begin()->rows) : _size;
 	const int rows = int((imgs.size() + cols - 1) / cols);
 	mergedImg.create(rows*size.height, cols*size.width, imgs.begin()->type());
+	mergedImg.setTo(cv::Scalar(255, 255, 255));
 	std::vector<cv::Rect> rois;
 	for (int view = 0; view < imgs.size(); view++) {
 		cv::Rect roi(cv::Point2i(view%cols * size.width, view / cols * size.height), size);
