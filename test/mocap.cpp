@@ -5,25 +5,53 @@
 #include <opencv2/opencv.hpp>
 #include <Eigen/Eigen>
 #include <json/json.h>
+#include "Timer.hpp"
 
+std::string toOutPath(fs::path root, int frame, std::string posix){
+	auto frameid = std::to_string(frame);
+	return (root/fs::path(frameid + posix)).string();
+}
 
 int main()
 {
-	std::map<std::string, Camera> cameras = ParseCameras("../data/shelf/calibration.json");
+	cv::FileStorage fs;
+	fs.open("../config/config.yml", cv::FileStorage::READ);
+	std::string setting_, dataPath, videoposix;
+	fs["setting"] >> setting_;
+	fs["path"] >> dataPath;
+	fs["videoposix"] >> videoposix;
+
+	std::cout << "experiment: " << setting_ << std::endl;
+	std::cout << "path: " << dataPath << std::endl;
+
+	auto setting = fs::path(setting_);
+	auto outPath = fs::path("../output")/setting;
+	fs::create_directories(outPath);
+	auto detectPath = outPath/fs::path("detect");
+	auto associPath = outPath/fs::path("associate");
+	auto projecPath = outPath/fs::path("reproj");
+	auto pointsPath = outPath/fs::path("keypoints");
+	fs::create_directories(detectPath);
+	fs::create_directories(associPath);
+	fs::create_directories(projecPath);
+	fs::create_directories(pointsPath);
+
+	std::map<std::string, Camera> cameras = ParseCameras(dataPath + "calibration.json");
 	Eigen::Matrix3Xf projs(3, cameras.size() * 4);
 	std::vector<cv::Mat> rawImgs(cameras.size());
 	std::vector<cv::VideoCapture> videos(cameras.size());
 	std::vector<std::vector<OpenposeDetection>> seqDetections(cameras.size());
-	const SkelDef& skelDef = GetSkelDef(SKEL19);
+	auto skelType = SKEL15;
+	const SkelDef& skelDef = GetSkelDef(skelType);
 
 #pragma omp parallel for
 	for (int i = 0; i < cameras.size(); i++) {
 		auto iter = std::next(cameras.begin(), i);
-		videos[i] = cv::VideoCapture("../data/shelf/video/" + iter->first + ".mpeg");
+		videos[i] = cv::VideoCapture(dataPath + "video/" + iter->first + videoposix);
 		videos[i].set(cv::CAP_PROP_POS_FRAMES, 0);
 
 		projs.middleCols(4 * i, 4) = iter->second.eiProj;
-		seqDetections[i] = ParseDetections("../data/shelf/detection/" + iter->first + ".txt");
+		seqDetections[i] = ParseDetections(dataPath + "detection/" + iter->first + ".txt");
 		cv::Size imgSize(int(videos[i].get(cv::CAP_PROP_FRAME_WIDTH)), int(videos[i].get(cv::CAP_PROP_FRAME_HEIGHT)));
 		for (auto&&detection : seqDetections[i]) {
 			for (auto&& joints : detection.joints) {
@@ -34,7 +62,7 @@ int main()
 		rawImgs[i] = cv::Mat();
 	}
 
-	KruskalAssociater associater(SKEL19, cameras);
+	KruskalAssociater associater(skelType, cameras);
 	associater.SetMaxTempDist(0.3f);
 	associater.SetMaxEpiDist(0.15f);
 	associater.SetPlaneThetaWelsh(5e-3f);
@@ -47,33 +75,46 @@ int main()
 	associater.SetMinCheckCnt(2);
 	associater.SetNodeMultiplex(true);
 
-	SkelFittingUpdater skelUpdater(SKEL19, "../data/skel/SKEL19");
-	SkelPainter skelPainter(SKEL19);
-
+	SkelFittingUpdater skelUpdater(skelType, "../data/skel/SKEL15");
+	SkelPainter skelPainter(skelType);
+	Timer timer;
 	for (int frameIdx = 0; ; frameIdx++) {
 		for (int view = 0; view < cameras.size(); view++) {
 			videos[view] >> rawImgs[view];
-			if (rawImgs[view].empty())
+			if (rawImgs[view].empty()){
+				std::cout << "empty view " << view << std::endl;
 				return 0;
-			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(SKEL19));
+			}
+			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(skelType));
 		}
-
+		timer.tic();
 		associater.SetSkels3dPrev(skelUpdater.GetSkel3d());
 		associater.Associate();
+		timer.toc("associate");
 		skelUpdater.Update(associater.GetSkels2d(), projs);
+		timer.toc(std::to_string(frameIdx));
 
-		
 		// save
-		const int layoutCols = 3;
+		const int layoutCols = cameras.size()%2==1?(cameras.size()+1)/2:cameras.size()/2;
 		cv::Mat detectImg, assocImg, reprojImg;
 		std::vector<cv::Rect> rois = SkelPainter::MergeImgs(rawImgs, detectImg, layoutCols,
 			{ rawImgs.begin()->cols, rawImgs.begin()->rows});
 		detectImg.copyTo(assocImg);
 		detectImg.copyTo(reprojImg);
+#pragma omp parallel for
+		for (const auto& skel2d:associater.GetSkels2d()){
+			break;
+			cv::Mat tmp;
+			detectImg.copyTo(tmp);
+			for (int view = 0; view < cameras.size(); view++) {
+				skelPainter.DrawAssoc(skel2d.second.middleCols(view * skelDef.jointSize, skelDef.jointSize), tmp(rois[view]), skel2d.first);
+			}
+			cv::imwrite(pointsPath.string() + std::to_string(frameIdx) + "_" + std::to_string(skel2d.first) + ".jpg", tmp);
+		}
 
 #pragma omp parallel for
 		for (int view = 0; view < cameras.size(); view++) {
-			const OpenposeDetection detection = seqDetections[view][frameIdx].Mapping(SKEL19);
+			const OpenposeDetection detection = seqDetections[view][frameIdx].Mapping(skelType);
 			skelPainter.DrawDetect(detection.joints, detection.pafs, detectImg(rois[view]));
 			for (const auto& skel2d : associater.GetSkels2d())
 				skelPainter.DrawAssoc(skel2d.second.middleCols(view * skelDef.jointSize, skelDef.jointSize), assocImg(rois[view]), skel2d.first);
@@ -82,10 +123,23 @@ int main()
 				skelPainter.DrawReproj(skel3d.second, projs.middleCols(4 * view, 4), reprojImg(rois[view]), skel3d.first);
 		}
 
-		cv::imwrite("../output/detect/" + std::to_string(frameIdx) + ".jpg", detectImg);
-		cv::imwrite("../output/assoc/" + std::to_string(frameIdx) + ".jpg", assocImg);
-		cv::imwrite("../output/reproj/" + std::to_string(frameIdx) + ".jpg", reprojImg);
+		cv::imwrite(toOutPath(detectPath, frameIdx, ".jpg"), detectImg, 
+			{cv::IMWRITE_JPEG_QUALITY, 50});
+		cv::imwrite(toOutPath(associPath, frameIdx, ".jpg"), assocImg,
+			{cv::IMWRITE_JPEG_QUALITY, 50});
+		cv::imwrite(toOutPath(projecPath, frameIdx, ".jpg"), reprojImg,
+			{cv::IMWRITE_JPEG_QUALITY, 50});
 		std::cout << std::to_string(frameIdx) << std::endl;
+		// 输出三维关键点
+        std::ofstream resout(toOutPath(pointsPath, frameIdx, ".txt"));
+		for(const auto& skel3d : skelUpdater.GetSkel3d()){
+			auto trackId = skel3d.first;
+			auto joints = skel3d.second.transpose();
+			resout << joints.rows() << std::endl;
+        	resout << trackId << std::endl;
+        	resout << joints << std::endl;
+		}
+		// break;
 	}
 	return 0;
 }
