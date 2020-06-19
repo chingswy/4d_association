@@ -1,13 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <Eigen/Eigen>
-#if __cplusplus >= 201703L && __has_include(<filesystem>)
-#include <filesystem>
-namespace fs = std::filesystem;
-#else
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
-#endif
 #include "skel_driver.h"
 #include "math_util.h"
 
