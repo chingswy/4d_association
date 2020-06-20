@@ -17,16 +17,12 @@ You can download our pre-built bin file on
  https://pan.baidu.com/s/184RRDghnwiSCmEbxneyamQ  4enh
 ```
 
- Then Unzip the dependency file in `C:\cppmodule` or other place, and check the `.props` file to make sure compiler can find the correct include path and lib path. Moreover, you need to copy the dll file of dependency to exe directory or add them to system environment. After that, you can download our data sequence and model on 
  
  ```
  https://pan.baidu.com/s/1LgjPAY5AxvLiLY91JYkDTw   prsr
  ``` 
  
  Finally, you will choose platform `release` and `x64` to compile and run our demo.
-
-### Citation
-
 ```
 Yuxiang Zhang, Liang An, Tao Yu, xiu Li, Kun Li, Yebin Liu. "4D Association Graph for Realtime Multi-person Motion Capture Using Multiple Video Cameras". arXiv 2020
 
