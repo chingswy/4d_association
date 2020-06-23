@@ -79,6 +79,8 @@ int main()
 	SkelPainter skelPainter(skelType);
 	Timer timer;
 	for (int frameIdx = 0; ; frameIdx++) {
+		timer.tic();
+#pragma omp parallel for
 		for (int view = 0; view < cameras.size(); view++) {
 			videos[view] >> rawImgs[view];
 			if (rawImgs[view].empty()){
@@ -87,10 +89,12 @@ int main()
 			}
 			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(skelType));
 		}
+		timer.toc("load data");
 		timer.tic();
 		associater.SetSkels3dPrev(skelUpdater.GetSkel3d());
 		associater.Associate();
 		timer.toc("associate");
+		timer.tic();
 		skelUpdater.Update(associater.GetSkels2d(), projs);
 		timer.toc(std::to_string(frameIdx));
 
@@ -132,6 +136,7 @@ int main()
 		std::cout << std::to_string(frameIdx) << std::endl;
 		// 输出三维关键点
         std::ofstream resout(toOutPath(pointsPath, frameIdx, ".txt"));
+		resout << skelUpdater.GetSkel3d().size() << std::endl;
 		for(const auto& skel3d : skelUpdater.GetSkel3d()){
 			auto trackId = skel3d.first;
 			auto joints = skel3d.second.transpose();

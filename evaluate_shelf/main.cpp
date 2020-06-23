@@ -9,6 +9,10 @@
 // #define SAVE_RESULT
 #define RUN_OLD_VERSION
 
+std::string toOutPath(fs::path root, int frame, std::string posix){
+	auto frameid = std::to_string(frame);
+	return (root/fs::path(frameid + posix)).string();
+}
 
 Eigen::Matrix4Xf MappingToShelf(const Eigen::Matrix4Xf& skel19)
 {
@@ -165,6 +169,16 @@ int main()
 			if (iter == correctJCnt.end())
 				iter = correctJCnt.insert(std::make_pair(identity, std::vector<Eigen::VectorXi>())).first;
 			iter->second.emplace_back(c);
+		}
+		// output 3d joints
+        std::ofstream resout(toOutPath("../output/shelf/keypoints", frameIdx+300, ".txt"));
+		resout << skelUpdater.GetSkel3d().size() << std::endl;
+		for(const auto& skel3d : skelUpdater.GetSkel3d()){
+			auto trackId = skel3d.first;
+			auto joints = skel3d.second.transpose();
+			resout << joints.rows() << std::endl;
+        	resout << trackId << std::endl;
+        	resout << joints << std::endl;
 		}
 
 #ifdef SAVE_RESULT

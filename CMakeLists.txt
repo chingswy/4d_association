@@ -31,10 +31,10 @@ target_link_libraries(mocap
 )
 set_property(TARGET mocap PROPERTY CXX_STANDARD 17)
 
-add_executable(mocap1 "${PROJECT_SOURCE_DIR}/test/main.cpp")
-target_include_directories(mocap1 PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(mocap1 
+add_executable(evaluate "${PROJECT_SOURCE_DIR}/evaluate_shelf/main.cpp")
+target_include_directories(evaluate PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(evaluate 
     association4d
     ${OpenCV_LIBRARIES}
 )
-set_property(TARGET mocap1 PROPERTY CXX_STANDARD 17)
+set_property(TARGET evaluate PROPERTY CXX_STANDARD 17)
