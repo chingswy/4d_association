@@ -77,7 +77,7 @@ Eigen::Matrix3Xf SkelDriver::CalcJBlend(const SkelParam& param) const
 	return jBlend;
 }
 
-
+// local transformation
 Eigen::Matrix4Xf SkelDriver::CalcNodeWarps(const SkelParam& param, const Eigen::Matrix3Xf& jBlend) const
 {
 	const SkelDef& def = GetSkelDef(m_type);
@@ -95,7 +95,7 @@ Eigen::Matrix4Xf SkelDriver::CalcNodeWarps(const SkelParam& param, const Eigen::
 	return nodeWarps;
 }
 
-
+// global transformation
 Eigen::Matrix4Xf SkelDriver::CalcChainWarps(const Eigen::Matrix4Xf& nodeWarps) const
 {
 	const SkelDef& def = GetSkelDef(m_type);
@@ -108,7 +108,7 @@ Eigen::Matrix4Xf SkelDriver::CalcChainWarps(const Eigen::Matrix4Xf& nodeWarps) c
 	return chainWarps;
 }
 
-
+// select the joints
 Eigen::Matrix3Xf SkelDriver::CalcJFinal(const Eigen::Matrix4Xf& chainWarps) const
 {
 	Eigen::Matrix3Xf jFinal(3, chainWarps.cols() / 4);

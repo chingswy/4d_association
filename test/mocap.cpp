@@ -6,7 +6,7 @@
 #include <Eigen/Eigen>
 #include <json/json.h>
 #include "Timer.hpp"
-
+#define write3d
 std::string toOutPath(fs::path root, int frame, std::string posix){
 	auto frameid = std::to_string(frame);
 	return (root/fs::path(frameid + posix)).string();
@@ -98,6 +98,7 @@ int main()
 		skelUpdater.Update(associater.GetSkels2d(), projs);
 		timer.toc(std::to_string(frameIdx));
 
+#ifdef vis2d
 		// save
 		const int layoutCols = cameras.size()%2==1?(cameras.size()+1)/2:cameras.size()/2;
 		cv::Mat detectImg, assocImg, reprojImg;
@@ -107,7 +108,6 @@ int main()
 		detectImg.copyTo(reprojImg);
 #pragma omp parallel for
 		for (const auto& skel2d:associater.GetSkels2d()){
-			break;
 			cv::Mat tmp;
 			detectImg.copyTo(tmp);
 			for (int view = 0; view < cameras.size(); view++) {
@@ -133,6 +133,9 @@ int main()
 			{cv::IMWRITE_JPEG_QUALITY, 50});
 		cv::imwrite(toOutPath(projecPath, frameIdx, ".jpg"), reprojImg,
 			{cv::IMWRITE_JPEG_QUALITY, 50});
+#endif
+
+#ifdef write3d
 		std::cout << std::to_string(frameIdx) << std::endl;
 		// 输出三维关键点
         std::ofstream resout(toOutPath(pointsPath, frameIdx, ".txt"));
@@ -144,7 +147,8 @@ int main()
         	resout << trackId << std::endl;
         	resout << joints << std::endl;
 		}
-		// break;
+#endif
+
 	}
 	return 0;
 }

@@ -11,6 +11,8 @@ public:
 	Associater(const SkelType& type, const std::map<std::string, Camera>& cams);
 	void SetDetection(const int& view, const OpenposeDetection& detection) { assert(detection.type == m_type);  m_detections[view] = detection; }
 	void SetDetection(const std::string& serialNumber, const OpenposeDetection& detection) { SetDetection(std::distance(m_cams.begin(), m_cams.find(serialNumber)), detection); }
+	void printDetection();
+	void printJointRay();
 	void SetSkels3dPrev(const std::map<int, Eigen::Matrix4Xf>& _skels3dPrev) { m_skels3dPrev = _skels3dPrev; }
 	const std::map<int, Eigen::Matrix3Xf>& GetSkels2d() const { return m_skels2d; }
 	void SetMaxEpiDist(const float& _maxEpiDist) { m_maxEpiDist = _maxEpiDist; }

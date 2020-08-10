@@ -153,3 +153,48 @@ void Associater::CalcSkels2d()
 	}
 }
 
+
+void Associater::printDetection(){
+	auto& def = GetSkelDef(m_type);
+	std::cout.precision(3);
+	std::cout.setf(std::ios::left);
+
+	for(int nv=0;nv<m_cams.size();nv++){
+		std::cout << "view " << nv << std::endl;
+		for(int nj=0;nj<15;nj++){
+			std::cout << "  joints " << nj << std::endl;
+			auto &joints = m_detections[nv].joints[nj];
+			for(int np=0;np<joints.cols();np++){
+				std::cout << "    (" << joints(0, np) 
+					<< ", " << joints(1, np) << "): " 
+					<< joints(2, np) << std::endl;
+			}
+		}
+		std::cout << "limbs: " << std::endl;
+		for(int np=0;np<def.pafSize;np++){
+			std::cout << "  limbs " << np << std::endl;
+			// auto& limbs = m_detections[nv]->limbMaps[limbmap[np]];
+			auto& limbs = m_detections[nv].pafs[np];
+
+			int np1 = limbs.rows();
+			int np2 = limbs.cols();
+			for(int npp1=0;npp1<np1;npp1++){
+				for(int npp2=0;npp2<np2;npp2++){
+					std::cout << "    " << limbs(npp1, npp2) << "  ";
+				}
+				std::cout << std::endl;
+			}
+		}
+	}
+}
+
+void Associater::printJointRay(){
+	std::cout.precision(3);
+	for(int nv=0;nv<m_jointRays.size();nv++){
+		std::cout << "view " << nv << std::endl;
+		for(int nj=0;nj<m_jointRays[nv].size();nj++){
+			std::cout << "  joints " << nj << std::endl;
+			std::cout << m_jointRays[nv][nj] << std::endl;
+		}
+	}
+}
