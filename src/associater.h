@@ -20,7 +20,7 @@ public:
 	void SetMinAsgnCnt(const int& _minAsgnCnt) { m_minAsgnCnt = _minAsgnCnt; }
 	virtual void Associate() = 0;
 
-protected:
+public:
 	float m_maxEpiDist = 0.2f;
 	float m_maxTempDist = 0.5f;
 	int m_minAsgnCnt = 5;

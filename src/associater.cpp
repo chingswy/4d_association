@@ -35,6 +35,8 @@ float Associater::Line2LineDist(const Eigen::Vector3f& pA, const Eigen::Vector3f
 void Associater::Initialize() 
 { 
 	const SkelDef& def = GetSkelDef(m_type);
+	// assignMap:
+	// (nJoints, nViews, nPeaks)
 #pragma omp parallel for
 	for (int jIdx = 0; jIdx < def.jointSize; jIdx++)
 		for (int view = 0; view < m_cams.size(); view++)
