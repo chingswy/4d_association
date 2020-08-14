@@ -1,4 +1,7 @@
 # 4d_association
+> **!!!**
+> **一定要使用高版本的gcc!!!!!**
+
 Code for cvpr2020 "4D Association Graph for Realtime Multi-person Motion Capture Using Multiple Video Cameras"
 
 ### Introduction
