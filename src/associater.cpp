@@ -141,15 +141,28 @@ void Associater::CalcSkels2d()
 	// set identity
 	m_skels2d.clear();
 	for (const auto& person : m_personsMap) {
-		const int identity = person.first < m_skels3dPrev.size() ? std::next(m_skels3dPrev.begin(), person.first)->first
-			: m_skels2d.empty() ? 0 : m_skels2d.rbegin()->first + 1;
+		int identity;
+		if(person.first < m_skels3dPrev.size()){
+			// 如果person.first < 3d骨架的size，那么说明对应的是3d的
+			// 所以取3d的对应的位置上的序号
+			identity = std::next(m_skels3dPrev.begin(), person.first)->first;
+		}else if(m_skels2d.empty()){
+			// 如果这个时候是空的，那么从0开始
+			identity = 0;
+		}else{
+			// 如果非空，那么取最右边的加1
+			identity = m_skels2d.rbegin()->first + 1;
+		}
 		Eigen::Matrix3Xf skel2d = Eigen::Matrix3Xf::Zero(3, m_cams.size() * def.jointSize);
 		for (int view = 0; view < m_cams.size(); view++) {
 			for (int jIdx = 0; jIdx < def.jointSize; jIdx++) {
 				const int index = person.second(jIdx, view);
-				if (index != -1) 
+				if (index != -1){
 					skel2d.col(view * def.jointSize + jIdx) = m_detections[view].joints[jIdx].col(index);
-					}
+					// assign map上的数值也要对应改回来
+					m_assignMap[view][jIdx][index] = identity;
+				} 
+			}
 		}
 		m_skels2d.insert(std::make_pair(identity, skel2d));
 	}

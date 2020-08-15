@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <json/json.h>
 #include "Timer.hpp"
-#define vis2d
+// #define vis2d
 #define write3d
 std::string toOutPath(fs::path root, int frame, std::string posix){
     auto frameid = std::to_string(frame);
@@ -20,6 +20,7 @@ std::string basename(std::string path){
 
 int main(int argc, char *argv[])
 {
+    bool vis2d = true;
     fs::path inp_path;
     if(argc > 1) {
         inp_path = fs::path(std::string(argv[1]));
@@ -27,6 +28,8 @@ int main(int argc, char *argv[])
         std::cout << ">>> Please specify the input path！" << std::endl;
         return 0;
     }
+    bool useVideo = argc > 2;
+
     auto seqname = inp_path.filename();
     auto dataroot = inp_path.parent_path().parent_path();
     auto outroot = dataroot/fs::path("association_out")/seqname;
@@ -43,6 +46,7 @@ int main(int argc, char *argv[])
     Eigen::Matrix3Xf projs(3, cameras.size() * 4);
     std::vector<cv::Mat> rawImgs(cameras.size());
     std::vector<cv::VideoCapture> videos(cameras.size());
+    std::vector<fs::path> images_path(cameras.size());
     std::vector<std::vector<OpenposeDetection>> seqDetections(cameras.size());
     auto skelType = SKEL15;
     const SkelDef& skelDef = GetSkelDef(skelType);
@@ -50,12 +54,21 @@ int main(int argc, char *argv[])
 #pragma omp parallel for
     for (int i = 0; i < cameras.size(); i++) {
         auto iter = std::next(cameras.begin(), i);
-        videos[i] = cv::VideoCapture((inp_path/fs::path("video")/fs::path(iter->first + videoposix)).string());
-        videos[i].set(cv::CAP_PROP_POS_FRAMES, 0);
-
+        cv::Size imgSize;
+        if(useVideo){
+            videos[i] = cv::VideoCapture((inp_path/fs::path("video")/fs::path(iter->first + videoposix)).string());
+            videos[i].set(cv::CAP_PROP_POS_FRAMES, 0);
+            imgSize.width = int(videos[i].get(cv::CAP_PROP_FRAME_WIDTH));
+            imgSize.height = int(videos[i].get(cv::CAP_PROP_FRAME_HEIGHT));
+        }else{
+            images_path[i] = inp_path/fs::path("images")/fs::path(iter->first);
+            cv::Mat img = cv::imread((images_path[i]/fs::path("0.jpg")).string());
+            imgSize.width = img.cols;
+            imgSize.height = img.rows;
+        }
+        std::cout << imgSize << std::endl;
         projs.middleCols(4 * i, 4) = iter->second.eiProj;
         seqDetections[i] = ParseDetections((inp_path/fs::path("detection")/fs::path(iter->first + ".txt")).string());
-        cv::Size imgSize(int(videos[i].get(cv::CAP_PROP_FRAME_WIDTH)), int(videos[i].get(cv::CAP_PROP_FRAME_HEIGHT)));
         for (auto&&detection : seqDetections[i]) {
             for (auto&& joints : detection.joints) {
                 joints.row(0) *= imgSize.width;
@@ -80,15 +93,23 @@ int main(int argc, char *argv[])
     SkelFittingUpdater skelUpdater(skelType, "../data/skel/SKEL15");
     SkelPainter skelPainter(skelType);
     Timer timer;
-    for (int frameIdx = 0; ; frameIdx++) {
+    for (int frameIdx = 0; ; frameIdx=frameIdx + 1) {
+        vis2d = frameIdx < 20;
         timer.tic();
 #pragma omp parallel for
         for (int view = 0; view < cameras.size(); view++) {
-            videos[view] >> rawImgs[view];
-            if (rawImgs[view].empty()){
-                std::cout << "empty view " << view << std::endl;
-                return 0;
+if(vis2d){
+            if(useVideo){
+                videos[view] >> rawImgs[view];
+                if (rawImgs[view].empty()){
+                    std::cout << "empty view " << view << std::endl;
+                    return 0;
+                }
+            }else{
+                auto imgname = (images_path[view]/fs::path(std::to_string(frameIdx) + ".jpg")).string();
+                rawImgs[view] = cv::imread(imgname);
             }
+}
             associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(skelType));
         }
         timer.toc("load data");
@@ -101,10 +122,9 @@ int main(int argc, char *argv[])
         skelUpdater.Update(associater.GetSkels2d(), projs);
         timer.toc(std::to_string(frameIdx));
 
-#ifdef vis2d
+if(vis2d){
         // save
-        // const int layoutCols = cameras.size()%2==1?(cameras.size()+1)/2:cameras.size()/2;
-        const int layoutCols = sqrt(cameras.size());
+        const int layoutCols = (int)(sqrt(cameras.size())+0.5);
         cv::Mat detectImg, assocImg, reprojImg;
         std::vector<cv::Rect> rois = SkelPainter::MergeImgs(rawImgs, detectImg, layoutCols,
             { rawImgs.begin()->cols, rawImgs.begin()->rows});
@@ -123,7 +143,12 @@ int main(int argc, char *argv[])
 #pragma omp parallel for
         for (int view = 0; view < cameras.size(); view++) {
             const OpenposeDetection detection = seqDetections[view][frameIdx].Mapping(skelType);
-            skelPainter.DrawDetect(detection.joints, detection.pafs, detectImg(rois[view]));
+            if(false){
+                skelPainter.DrawDetect(detection.joints, detection.pafs, detectImg(rois[view]));
+            }else{
+                skelPainter.DrawDetectAssign(detection.joints, detection.pafs, associater.m_assignMap[view], detectImg(rois[view]));
+            }
+
             for (const auto& skel2d : associater.GetSkels2d())
                 skelPainter.DrawAssoc(skel2d.second.middleCols(view * skelDef.jointSize, skelDef.jointSize), assocImg(rois[view]), skel2d.first);
 
@@ -137,7 +162,7 @@ int main(int argc, char *argv[])
             {cv::IMWRITE_JPEG_QUALITY, 50});
         cv::imwrite(toOutPath(output_path["reproj"], frameIdx, ".jpg"), reprojImg,
             {cv::IMWRITE_JPEG_QUALITY, 50});
-#endif
+}
 
 #ifdef write3d
 		int nJoints = 15;
