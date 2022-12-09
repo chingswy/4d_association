@@ -52,8 +52,8 @@ int main()
 	SkelPainter skelPainter(SKEL19);
 	skelPainter.rate = 512.f / float(cameras.begin()->second.imgSize.width);
 	SkelFittingUpdater skelUpdater(SKEL19, "../data/skel/SKEL19_new");
-	skelUpdater.SetTemporalTransTerm(1e-1f / std::powf(skelPainter.rate, 2));
-	skelUpdater.SetTemporalPoseTerm(1e-1f / std::powf(skelPainter.rate, 2));
+	skelUpdater.SetTemporalTransTerm(1e-1f / std::pow(skelPainter.rate, 2));
+	skelUpdater.SetTemporalPoseTerm(1e-1f / std::pow(skelPainter.rate, 2));
 	cv::Mat detectImg, assocImg, reprojImg;
 	cv::Mat resizeImg;
 	for (int frameIdx = 0; ; frameIdx++) {

@@ -1,11 +1,11 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <iostream>
 #include <Eigen/Core>
 #include <opencv2/core.hpp>
 #include <json/json.h>
 #include "math_util.h"
-
 
 struct Camera
 {

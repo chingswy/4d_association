@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Core>
+#include <fstream>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>

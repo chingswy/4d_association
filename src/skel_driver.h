@@ -5,6 +5,13 @@
 #include <memory>
 #include "skel.h"
 
+#if __cplusplus >= 201703L && __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 std::vector<std::map<int, Eigen::Matrix4Xf>> ParseSkels(const std::string& filename);
 void SerializeSkels(const std::vector<std::map<int, Eigen::Matrix4Xf>>& skels, const std::string& filename);
