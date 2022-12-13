@@ -6,7 +6,7 @@
 #include <json/json.h>
 
 
-// #define SAVE_RESULT
+#define SAVE_RESULT
 #define RUN_OLD_VERSION
 
 

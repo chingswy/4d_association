@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
-
+#include <iostream>
 
 enum SkelType
 {
@@ -165,6 +165,12 @@ inline const SkelMapping& GetSkelMapping(const SkelType& srcType, const SkelType
 		_skelMappings[BODY25][SKEL15].pafMapping.resize(26);
 		_skelMappings[BODY25][SKEL15].pafMapping << 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, 10, 11, 12, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1;
 		
+		// SKEL15<->SKEL15
+		_skelMappings[SKEL15][SKEL15].jointMapping.resize(15);
+		_skelMappings[SKEL15][SKEL15].jointMapping << 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14;
+		_skelMappings[SKEL15][SKEL15].pafMapping.resize(14);
+		_skelMappings[SKEL15][SKEL15].pafMapping << 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13;
+
 		return _skelMappings;
 	}();
 
