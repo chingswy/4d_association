@@ -6,6 +6,9 @@
 #include <Eigen/Eigen>
 #include <json/json.h>
 
+using ListStr = std::vector<std::string>;
+using Str = std::string;
+
 std::string toOutPath(fs::path root, int frame, std::string posix){
     auto frameid = std::to_string(frame);
     return (root/fs::path(frameid + posix)).string();
@@ -18,9 +21,25 @@ std::string num2string(const int value, const unsigned precision)
      return oss.str();
 }
 
+int index(ListStr list, Str str){
+	auto iter = std::find(list.begin(), list.end(), str);
+	if(iter != list.end()){
+		return std::distance(list.begin(), iter);
+	}else{
+		return -1;
+	}
+}
+
 enum DataMode{
 	VIDEO = 0,
 	IMAGE = 1,
+};
+
+enum DatasetMode{
+	ZJUMOCAP = 0,
+	MHHI = 1,
+	PANOPTIC = 2,
+	DATASET_SIZE,
 };
 
 int main(int argc, char *argv[])
@@ -33,9 +52,22 @@ int main(int argc, char *argv[])
         return 0;
     }
 	DataMode mode = IMAGE;
+	DatasetMode data_mode = ZJUMOCAP;
+	std::string IMAGE_EXT = ".jpg";
 
-	const std::vector<std::string> camlist = {"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23"};
-	const std::vector<std::string> camvis = {"01", "07", "13", "19"};
+	std::vector<std::string> _camlist, _camvis;
+	if(data_mode == DatasetMode::MHHI){
+		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"};
+		_camvis = {"00", "04", "10", "11"};
+		IMAGE_EXT = ".png";
+	}else if(data_mode == DatasetMode::ZJUMOCAP){
+		// _camlist = {"01", "02", "03", "04", "05", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"};
+		_camlist = {"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23"};
+		_camvis = {"01", "07", "13", "19"};
+		IMAGE_EXT = ".jpg";
+	}
+	std::vector<std::string> camlist = _camlist;
+	std::vector<std::string> camvis = _camvis;
 	std::map<std::string, Camera> cameras_all = ParseCameras("../data/" + dataset + "/calibration.json");
 	// 只保留部分cameras
 	std::map<std::string, Camera> cameras;
@@ -52,7 +84,7 @@ int main(int argc, char *argv[])
     }
 
 	Eigen::Matrix3Xf projs(3, cameras.size() * 4);
-	std::vector<cv::Mat> rawImgs(cameras.size());
+	std::vector<cv::Mat> rawImgs(camvis.size());
 	std::vector<cv::VideoCapture> videos(cameras.size());
 	std::vector<fs::path> images_path(cameras.size());
 	std::vector<std::vector<OpenposeDetection>> seqDetections(cameras.size());
@@ -70,9 +102,12 @@ int main(int argc, char *argv[])
 		}else{
 			// reading the images
 			images_path[i] = inp_path/fs::path("images")/fs::path(iter->first);
-			std::string imgpath = images_path[i]/"000000.jpg";
+			std::string imgpath = images_path[i]/("000000"+IMAGE_EXT);
 			cv::Mat img = cv::imread(imgpath);
 			imgSize = img.size();
+			if(imgSize.height == 0){
+				std::cout << "Fail to load image " << imgpath << std::endl;
+			}
 		}
 
 		std::cout << "view: " << iter->first << " imgSize: " << imgSize << std::endl;
@@ -84,7 +119,10 @@ int main(int argc, char *argv[])
 				joints.row(1) *= (imgSize.height - 1);
 			}
 		}
-		rawImgs[i].create(imgSize, CV_8UC3);
+		if(index(camvis, iter->first) >= 0){
+			std::cout << "view: " << iter->first << " imgSize: " << index(camvis, iter->first) << std::endl;
+			rawImgs[index(camvis, iter->first)].create(imgSize, CV_8UC3);
+		}
 	}
 
 	KruskalAssociater associater(SKEL15, cameras);
@@ -111,19 +149,24 @@ int main(int argc, char *argv[])
 	for (int frameIdx = 0; ; frameIdx++) {
 		bool flag = true;
 		for (int view = 0; view < cameras.size(); view++) {
-			if(mode == DataMode::VIDEO){
-				videos[view] >> rawImgs[view];
-			}else{
-				auto imgname = (images_path[view]/fs::path(num2string(frameIdx, 6) + ".jpg")).string();
-				rawImgs[view] = cv::imread(imgname);
+			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(SKEL15));
+			if(index(camvis, camlist[view]) < 0){
+				continue;
 			}
-			if (rawImgs[view].empty()) {
+			int _view = index(camvis, camlist[view]);
+			if(mode == DataMode::VIDEO){
+				videos[view] >> rawImgs[_view];
+			}else{
+				auto imgname = (images_path[view]/fs::path(num2string(frameIdx, 6) + IMAGE_EXT)).string();
+				// need to visualize
+				rawImgs[_view] = cv::imread(imgname);
+			}
+			if (rawImgs[_view].empty()) {
 				std::cout << "frameIdx: " << frameIdx << " view: " << view << " empty" << std::endl;
 				flag = false;
 				break;
 			}
-			cv::resize(rawImgs[view], rawImgs[view], cv::Size(), skelPainter.rate, skelPainter.rate);
-			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(SKEL15));
+			cv::resize(rawImgs[_view], rawImgs[_view], cv::Size(), skelPainter.rate, skelPainter.rate);
 		}
 		if (!flag)
 			break;
@@ -133,21 +176,22 @@ int main(int argc, char *argv[])
 
 		
 		// save
-		const int layoutCols = std::sqrt(cameras.size()) + 0.5;
+		const int layoutCols = std::sqrt(camvis.size()) + 0.5;
 		std::vector<cv::Rect> rois = SkelPainter::MergeImgs(rawImgs, detectImg, layoutCols,
 			{ rawImgs.begin()->cols, rawImgs.begin()->rows});
 		detectImg.copyTo(assocImg);
 		detectImg.copyTo(reprojImg);
 
 #pragma omp parallel for
-		for (int view = 0; view < cameras.size(); view++) {
+		for (int _view = 0; _view < camvis.size(); _view++) {
+			int view = index(camlist, camvis[_view]);
 			const OpenposeDetection detection = seqDetections[view][frameIdx].Mapping(SKEL15);
-			skelPainter.DrawDetect(detection.joints, detection.pafs, detectImg(rois[view]));
+			skelPainter.DrawDetect(detection.joints, detection.pafs, detectImg(rois[_view]));
 			for (const auto& skel2d : associater.GetSkels2d())
-				skelPainter.DrawAssoc(skel2d.second.middleCols(view * skelDef.jointSize, skelDef.jointSize), assocImg(rois[view]), skel2d.first);
+				skelPainter.DrawAssoc(skel2d.second.middleCols(view * skelDef.jointSize, skelDef.jointSize), assocImg(rois[_view]), skel2d.first);
 
 			for(const auto& skel3d : skelUpdater.GetSkel3d())
-				skelPainter.DrawReproj(skel3d.second, projs.middleCols(4 * view, 4), reprojImg(rois[view]), skel3d.first);
+				skelPainter.DrawReproj(skel3d.second, projs.middleCols(4 * view, 4), reprojImg(rois[_view]), skel3d.first);
 		}
 
 		skels.emplace_back(skelUpdater.GetSkel3d());
@@ -157,6 +201,6 @@ int main(int argc, char *argv[])
 		std::cout << std::to_string(frameIdx) << std::endl;
 	}
 
-	SerializeSkels(skels, "../output/skel.txt");
+	// SerializeSkels(skels, "../output/skel.txt");
 	return 0;
 }
