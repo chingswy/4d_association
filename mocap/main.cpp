@@ -39,6 +39,7 @@ enum DatasetMode{
 	ZJUMOCAP = 0,
 	MHHI = 1,
 	PANOPTIC = 2,
+	CHI3D = 3,
 	DATASET_SIZE,
 };
 
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 	DataMode mode = IMAGE;
-	DatasetMode data_mode = ZJUMOCAP;
+	DatasetMode data_mode = CHI3D;
 	std::string IMAGE_EXT = ".jpg";
 
 	std::vector<std::string> _camlist, _camvis;
@@ -65,17 +66,20 @@ int main(int argc, char *argv[])
 		_camlist = {"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23"};
 		_camvis = {"01", "07", "13", "19"};
 		IMAGE_EXT = ".jpg";
+	}else if(data_mode == DatasetMode::CHI3D){
+		_camlist = {"50591643", "58860488", "60457274", "65906101"};
+		_camvis = {"50591643", "58860488", "60457274", "65906101"};
 	}
 	std::vector<std::string> camlist = _camlist;
 	std::vector<std::string> camvis = _camvis;
-	std::map<std::string, Camera> cameras_all = ParseCameras("../data/" + dataset + "/calibration.json");
+	std::map<std::string, Camera> cameras_all = ParseCameras(dataset + "/calibration.json");
 	// 只保留部分cameras
 	std::map<std::string, Camera> cameras;
 	for(auto cam: camlist){
 		cameras[cam] = cameras_all[cam];
 	}
-	auto inp_path = fs::path("../data")/dataset;
-	auto outroot = fs::path("../association_out")/dataset;
+	auto inp_path = fs::path(dataset);
+	auto outroot = inp_path/fs::path("association_out");
 	std::vector<std::string> outlist = {"detect", "associate", "reproj", "keypoints"};
     std::unordered_map<std::string, fs::path> output_path;
     for(auto name: outlist){
@@ -96,7 +100,7 @@ int main(int argc, char *argv[])
 		auto iter = std::next(cameras.begin(), i);
 		cv::Size imgSize;
 		if(mode == DataMode::VIDEO){
-			videos[i] = cv::VideoCapture("../data/" + dataset + "/video/" + iter->first + ".mp4");
+			videos[i] = cv::VideoCapture(dataset + "/video/" + iter->first + ".mp4");
 			videos[i].set(cv::CAP_PROP_POS_FRAMES, 0);
 			imgSize = cv::Size(int(videos[i].get(cv::CAP_PROP_FRAME_WIDTH)), int(videos[i].get(cv::CAP_PROP_FRAME_HEIGHT)));
 		}else{
@@ -112,7 +116,7 @@ int main(int argc, char *argv[])
 
 		std::cout << "view: " << iter->first << " imgSize: " << imgSize << std::endl;
 		projs.middleCols(4 * i, 4) = iter->second.eiProj;
-		seqDetections[i] = ParseDetections("../data/" + dataset + "/detection/" + iter->first + ".txt");
+		seqDetections[i] = ParseDetections(dataset + "/detection/" + iter->first + ".txt");
 		for (auto&& detection : seqDetections[i]) {
 			for (auto&& joints : detection.joints) {
 				joints.row(0) *= (imgSize.width - 1);
@@ -195,12 +199,22 @@ int main(int argc, char *argv[])
 		}
 
 		skels.emplace_back(skelUpdater.GetSkel3d());
+		auto skel3d = skelUpdater.GetSkel3d();
+		auto outname = toOutPath(output_path["keypoints"], frameIdx, ".txt");
+		std::ofstream outfile(outname);
+		outfile << skel3d.size() << std::endl;
+		for(const auto& skel: skel3d){
+			outfile << skel.first << std::endl;
+			outfile << skel.second.transpose() << std::endl;
+		}
+		outfile.close();
+
 		cv::imwrite(toOutPath(output_path["detect"], frameIdx, ".jpg"), detectImg);
 		cv::imwrite(toOutPath(output_path["associate"], frameIdx, ".jpg"), assocImg);
 		cv::imwrite(toOutPath(output_path["reproj"], frameIdx, ".jpg"), reprojImg);
 		std::cout << std::to_string(frameIdx) << std::endl;
 	}
-
+	skels.clear();
 	// SerializeSkels(skels, "../output/skel.txt");
 	return 0;
 }
