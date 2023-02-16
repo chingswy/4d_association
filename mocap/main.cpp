@@ -40,20 +40,36 @@ enum DatasetMode{
 	MHHI = 1,
 	PANOPTIC = 2,
 	CHI3D = 3,
+	ZJUMOCAPv4 = 4,
 	DATASET_SIZE,
 };
 
 int main(int argc, char *argv[])
 {
 	std::string dataset;
+	DatasetMode data_mode;
 	if(argc > 1) {
         dataset = std::string(argv[1]);
     } else {
         std::cout << ">>> Please specify the input path！" << std::endl;
         return 0;
     }
+	if(argc > 2){
+		std::string _data_mode = std::string(argv[2]);
+		if(_data_mode == "zjumocap"){
+			data_mode = DatasetMode::ZJUMOCAP;
+		}else if(_data_mode == "chi3d"){
+			data_mode = DatasetMode::CHI3D;
+		}else if(_data_mode == "zjumocapv4"){
+			data_mode = DatasetMode::ZJUMOCAPv4;
+		}else if(_data_mode == "mhhi"){
+			data_mode = DatasetMode::MHHI;
+		}
+        std::cout << ">>> Set data mode to " << data_mode << " given " << _data_mode  << std::endl;
+	}else{
+		data_mode = DatasetMode::CHI3D;
+	}
 	DataMode mode = IMAGE;
-	DatasetMode data_mode = CHI3D;
 	std::string IMAGE_EXT = ".jpg";
 
 	std::vector<std::string> _camlist, _camvis;
@@ -61,12 +77,19 @@ int main(int argc, char *argv[])
 		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"};
 		_camvis = {"00", "04", "10", "11"};
 		IMAGE_EXT = ".png";
-	}else if(data_mode == DatasetMode::ZJUMOCAP){
+	}
+	else if(data_mode == DatasetMode::ZJUMOCAP){
 		// _camlist = {"01", "02", "03", "04", "05", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"};
 		_camlist = {"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23"};
 		_camvis = {"01", "07", "13", "19"};
 		IMAGE_EXT = ".jpg";
-	}else if(data_mode == DatasetMode::CHI3D){
+	}
+	else if(data_mode == DatasetMode::ZJUMOCAPv4){
+		_camlist = {"01", "07", "13", "19"};
+		_camvis = {"01", "07", "13", "19"};
+		IMAGE_EXT = ".jpg";
+	}
+	else if(data_mode == DatasetMode::CHI3D){
 		_camlist = {"50591643", "58860488", "60457274", "65906101"};
 		_camvis = {"50591643", "58860488", "60457274", "65906101"};
 	}
