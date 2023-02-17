@@ -41,6 +41,8 @@ enum DatasetMode{
 	PANOPTIC = 2,
 	CHI3D = 3,
 	ZJUMOCAPv4 = 4,
+	MHHI_SHAKE = 5,
+	MHHI_JUMPX = 5,
 	DATASET_SIZE,
 };
 
@@ -64,6 +66,10 @@ int main(int argc, char *argv[])
 			data_mode = DatasetMode::ZJUMOCAPv4;
 		}else if(_data_mode == "mhhi"){
 			data_mode = DatasetMode::MHHI;
+		}else if(_data_mode == "mhhi_shake"){
+			data_mode = DatasetMode::MHHI_SHAKE;
+		}else if(_data_mode == "mhhi_jumpx"){
+			data_mode = DatasetMode::MHHI_JUMPX;
 		}
         std::cout << ">>> Set data mode to " << data_mode << " given " << _data_mode  << std::endl;
 	}else{
@@ -76,6 +82,16 @@ int main(int argc, char *argv[])
 	if(data_mode == DatasetMode::MHHI){
 		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"};
 		_camvis = {"00", "04", "10", "11"};
+		IMAGE_EXT = ".png";
+	}
+	else if(data_mode == DatasetMode::MHHI_SHAKE){
+		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10"};
+		_camvis = {"00", "04", "10", "02"};
+		IMAGE_EXT = ".png";
+	}
+	else if(data_mode == DatasetMode::MHHI_JUMPX){
+		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "10", "11"};
+		_camvis = {"00", "04", "10", "02"};
 		IMAGE_EXT = ".png";
 	}
 	else if(data_mode == DatasetMode::ZJUMOCAP){
