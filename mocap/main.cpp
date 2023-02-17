@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 	std::string IMAGE_EXT = ".jpg";
 
 	std::vector<std::string> _camlist, _camvis;
+	int start_frame = 0;
 	if(data_mode == DatasetMode::MHHI){
 		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"};
 		_camvis = {"00", "04", "10", "11"};
@@ -88,6 +89,7 @@ int main(int argc, char *argv[])
 		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10"};
 		_camvis = {"00", "04", "10", "02"};
 		IMAGE_EXT = ".png";
+		start_frame = 151;
 	}
 	else if(data_mode == DatasetMode::MHHI_JUMPX){
 		_camlist = {"00", "01", "02", "03", "04", "05", "06", "07", "08", "10", "11"};
@@ -145,7 +147,7 @@ int main(int argc, char *argv[])
 		}else{
 			// reading the images
 			images_path[i] = inp_path/fs::path("images")/fs::path(iter->first);
-			std::string imgpath = images_path[i]/("000000"+IMAGE_EXT);
+			std::string imgpath = images_path[i]/(num2string(start_frame, 6)+IMAGE_EXT);
 			cv::Mat img = cv::imread(imgpath);
 			imgSize = img.size();
 			if(imgSize.height == 0){
@@ -189,7 +191,7 @@ int main(int argc, char *argv[])
 	skelUpdater.SetTemporalPoseTerm(1e-1f / std::pow(skelPainter.rate, 2));
 	cv::Mat detectImg, assocImg, reprojImg;
 	cv::Mat resizeImg;
-	for (int frameIdx = 0; ; frameIdx++) {
+	for (int frameIdx = start_frame; ; frameIdx++) {
 		bool flag = true;
 		for (int view = 0; view < cameras.size(); view++) {
 			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(SKEL15));
