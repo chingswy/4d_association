@@ -42,7 +42,7 @@ enum DatasetMode{
 	CHI3D = 3,
 	ZJUMOCAPv4 = 4,
 	MHHI_SHAKE = 5,
-	MHHI_JUMPX = 5,
+	MHHI_JUMPX ,
 	DATASET_SIZE,
 };
 
