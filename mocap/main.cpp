@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
 	for (int frameIdx = start_frame; ; frameIdx++) {
 		bool flag = true;
 		for (int view = 0; view < cameras.size(); view++) {
-			associater.SetDetection(view, seqDetections[view][frameIdx].Mapping(SKEL15));
+			associater.SetDetection(view, seqDetections[view][frameIdx-start_frame].Mapping(SKEL15));
 			if(index(camvis, camlist[view]) < 0){
 				continue;
 			}
@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
 #pragma omp parallel for
 		for (int _view = 0; _view < camvis.size(); _view++) {
 			int view = index(camlist, camvis[_view]);
-			const OpenposeDetection detection = seqDetections[view][frameIdx].Mapping(SKEL15);
+			const OpenposeDetection detection = seqDetections[view][frameIdx-start_frame].Mapping(SKEL15);
 			skelPainter.DrawDetect(detection.joints, detection.pafs, detectImg(rois[_view]));
 			for (const auto& skel2d : associater.GetSkels2d())
 				skelPainter.DrawAssoc(skel2d.second.middleCols(view * skelDef.jointSize, skelDef.jointSize), assocImg(rois[_view]), skel2d.first);
