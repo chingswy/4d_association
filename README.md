@@ -1,3 +1,21 @@
+# Run on custom Dataset
+
+Run openpose by my modified version to store the paf.
+```bash
+python3 apps/preprocess/extract_heatmap_by_openpose.py ${data} --pafs
+```
+
+解析成4D Association的格式
+```bash
+python3 scripts/dataset/parse_4dassociation.py 
+```
+
+运行4D Association代码
+
+```bash
+
+```
+
 # 4d_association
 Code for cvpr2020 "4D Association Graph for Realtime Multi-person Motion Capture Using Multiple Video Cameras"
 
