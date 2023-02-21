@@ -30,6 +30,8 @@ int index(ListStr list, Str str){
 	}
 }
 
+#define mylog(frame, x) std::cout << ">>> [" << frame << "] " << x << std::endl;
+
 enum DataMode{
 	VIDEO = 0,
 	IMAGE = 1,
@@ -158,6 +160,7 @@ int main(int argc, char *argv[])
 		std::cout << "view: " << iter->first << " imgSize: " << imgSize << std::endl;
 		projs.middleCols(4 * i, 4) = iter->second.eiProj;
 		seqDetections[i] = ParseDetections(dataset + "/detection/" + iter->first + ".txt");
+		std::cout << "view: " << iter->first << " detections: " << seqDetections[i].size() << std::endl;
 		for (auto&& detection : seqDetections[i]) {
 			for (auto&& joints : detection.joints) {
 				joints.row(0) *= (imgSize.width - 1);
@@ -193,7 +196,12 @@ int main(int argc, char *argv[])
 	cv::Mat resizeImg;
 	for (int frameIdx = start_frame; ; frameIdx++) {
 		bool flag = true;
+		mylog(frameIdx, "Reading images");
 		for (int view = 0; view < cameras.size(); view++) {
+			if(frameIdx - start_frame >= seqDetections[view].size()){
+				flag = false;
+				break;
+			}
 			associater.SetDetection(view, seqDetections[view][frameIdx-start_frame].Mapping(SKEL15));
 			if(index(camvis, camlist[view]) < 0){
 				continue;
@@ -215,11 +223,12 @@ int main(int argc, char *argv[])
 		}
 		if (!flag)
 			break;
+		mylog(frameIdx, "Associate");
 		associater.SetSkels3dPrev(skelUpdater.GetSkel3d());
 		associater.Associate();
 		skelUpdater.Update(associater.GetSkels2d(), projs);
 
-		
+		mylog(frameIdx, "Visualize");
 		// save
 		const int layoutCols = std::sqrt(camvis.size()) + 0.5;
 		std::vector<cv::Rect> rois = SkelPainter::MergeImgs(rawImgs, detectImg, layoutCols,
