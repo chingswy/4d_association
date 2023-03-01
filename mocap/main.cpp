@@ -45,6 +45,7 @@ enum DatasetMode{
 	ZJUMOCAPv4 = 4,
 	MHHI_SHAKE = 5,
 	MHHI_JUMPX ,
+	MHHI_0123,
 	DATASET_SIZE,
 };
 
@@ -58,8 +59,9 @@ int main(int argc, char *argv[])
         std::cout << ">>> Please specify the input path！" << std::endl;
         return 0;
     }
+	std::string _data_mode = "";
 	if(argc > 2){
-		std::string _data_mode = std::string(argv[2]);
+		_data_mode = std::string(argv[2]);
 		if(_data_mode == "zjumocap"){
 			data_mode = DatasetMode::ZJUMOCAP;
 		}else if(_data_mode == "chi3d"){
@@ -72,6 +74,10 @@ int main(int argc, char *argv[])
 			data_mode = DatasetMode::MHHI_SHAKE;
 		}else if(_data_mode == "mhhi_jumpx"){
 			data_mode = DatasetMode::MHHI_JUMPX;
+		}else if(_data_mode == "mhhi0123"){
+			data_mode = DatasetMode::MHHI_0123;
+		}else{
+			exit(0);
 		}
         std::cout << ">>> Set data mode to " << data_mode << " given " << _data_mode  << std::endl;
 	}else{
@@ -98,6 +104,11 @@ int main(int argc, char *argv[])
 		_camvis = {"00", "04", "10", "02"};
 		IMAGE_EXT = ".png";
 	}
+	else if(data_mode == DatasetMode::MHHI_0123){
+		_camlist = {"00", "01", "02", "03"};
+		_camvis = {"00", "01", "02", "03"};
+		IMAGE_EXT = ".png";
+	}
 	else if(data_mode == DatasetMode::ZJUMOCAP){
 		// _camlist = {"01", "02", "03", "04", "05", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"};
 		_camlist = {"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23"};
@@ -122,7 +133,7 @@ int main(int argc, char *argv[])
 		cameras[cam] = cameras_all[cam];
 	}
 	auto inp_path = fs::path(dataset);
-	auto outroot = inp_path/fs::path("association_out");
+	auto outroot = inp_path/fs::path("association_"+_data_mode);
 	std::vector<std::string> outlist = {"detect", "associate", "reproj", "keypoints"};
     std::unordered_map<std::string, fs::path> output_path;
     for(auto name: outlist){
